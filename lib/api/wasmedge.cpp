@@ -965,6 +965,26 @@ WasmEdge_ConfigureIsForceInterpreter(const WasmEdge_ConfigureContext *Cxt) {
   return false;
 }
 
+WASMEDGE_CAPI_EXPORT void
+WasmEdge_ConfigureSetLazyJIT(WasmEdge_ConfigureContext *Cxt,
+                             const bool IsLazyJIT) {
+  if (Cxt) {
+    Cxt->Conf.getRuntimeConfigure().setLazyJIT(IsLazyJIT);
+    if (IsLazyJIT) {
+      // Lazy JIT requires JIT to be enabled
+      Cxt->Conf.getRuntimeConfigure().setEnableJIT(true);
+    }
+  }
+}
+
+WASMEDGE_CAPI_EXPORT bool
+WasmEdge_ConfigureIsLazyJIT(const WasmEdge_ConfigureContext *Cxt) {
+  if (Cxt) {
+    return Cxt->Conf.getRuntimeConfigure().isLazyJIT();
+  }
+  return false;
+}
+
 WASMEDGE_CAPI_EXPORT void WasmEdge_ConfigureCompilerSetOptimizationLevel(
     WasmEdge_ConfigureContext *Cxt,
     const enum WasmEdge_CompilerOptimizationLevel Level) {

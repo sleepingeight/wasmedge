@@ -119,7 +119,8 @@ public:
         EnableCoredump(RHS.EnableCoredump.load(std::memory_order_relaxed)),
         CoredumpWasmgdb(RHS.CoredumpWasmgdb.load(std::memory_order_relaxed)),
         ForceInterpreter(RHS.ForceInterpreter.load(std::memory_order_relaxed)),
-        AllowAFUNIX(RHS.AllowAFUNIX.load(std::memory_order_relaxed)) {}
+        AllowAFUNIX(RHS.AllowAFUNIX.load(std::memory_order_relaxed)),
+        LazyJIT(RHS.LazyJIT.load(std::memory_order_relaxed)) {}
 
   void setMaxMemoryPage(const uint32_t Page) noexcept {
     MaxMemPage.store(Page, std::memory_order_relaxed);
@@ -169,6 +170,16 @@ public:
     return AllowAFUNIX.load(std::memory_order_relaxed);
   }
 
+  /// Lazy JIT mode control: when enabled, functions are compiled on-demand
+  /// rather than compiling the entire module upfront.
+  void setLazyJIT(bool IsLazyJIT) noexcept {
+    LazyJIT.store(IsLazyJIT, std::memory_order_relaxed);
+  }
+
+  bool isLazyJIT() const noexcept {
+    return LazyJIT.load(std::memory_order_relaxed);
+  }
+
 private:
   std::atomic<uint32_t> MaxMemPage = 65536;
   std::atomic<bool> EnableJIT = false;
@@ -176,6 +187,7 @@ private:
   std::atomic<bool> CoredumpWasmgdb = false;
   std::atomic<bool> ForceInterpreter = false;
   std::atomic<bool> AllowAFUNIX = false;
+  std::atomic<bool> LazyJIT = false;
 };
 
 class StatisticsConfigure {

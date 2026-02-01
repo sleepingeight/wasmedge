@@ -63,6 +63,63 @@ std::vector<Symbol<void>> JITLibrary::getCodes(size_t Offset,
   return Result;
 }
 
+LazyJITLibrary::LazyJITLibrary(OrcLLJIT JIT, size_t NumFuncs) noexcept
+    : J(std::make_unique<OrcLLJIT>(std::move(JIT)).release()),
+      NumFunctions(NumFuncs) {
+  spdlog::info("LazyJIT initialized with {} functions"sv, NumFunctions);
+}
+
+LazyJITLibrary::~LazyJITLibrary() noexcept {
+  std::unique_ptr<OrcLLJIT> JIT(std::exchange(J, nullptr));
+}
+
+Symbol<const Executable::IntrinsicsTable *>
+LazyJITLibrary::getIntrinsics() noexcept {
+  if (auto Symbol = J->lookup<const IntrinsicsTable *>("intrinsics")) {
+    return createSymbol<const IntrinsicsTable *>(*Symbol);
+  } else {
+    spdlog::error("{}"sv, Symbol.error().message().string_view());
+    return {};
+  }
+}
+
+std::vector<Symbol<Executable::Wrapper>>
+LazyJITLibrary::getTypes(size_t Size) noexcept {
+  std::vector<Symbol<Wrapper>> Result;
+  Result.reserve(Size);
+  for (size_t I = 0; I < Size; ++I) {
+    const std::string Name = fmt::format("t{}"sv, I);
+    if (auto Symbol = J->lookup<Wrapper>(Name.c_str())) {
+      Result.push_back(createSymbol<Wrapper>(*Symbol));
+    } else {
+      spdlog::error("{}"sv, Symbol.error().message().string_view());
+      Result.emplace_back();
+    }
+  }
+  return Result;
+}
+
+std::vector<Symbol<void>> LazyJITLibrary::getCodes(size_t Offset,
+                                                   size_t Size) noexcept {
+  // in lazy JIT mode, functions are compiled on-demand, so we return empty
+  // symbols initiallythis is expected behavior.
+  std::vector<Symbol<void>> Result;
+  Result.reserve(Size);
+  for (size_t I = 0; I < Size; ++I) {
+    const std::string Name = fmt::format("f{}"sv, I + Offset);
+    if (auto Symbol = J->lookup<void>(Name.c_str())) {
+      Result.push_back(createSymbol<void>(*Symbol));
+    } else {
+      // in lazy JIT mode, not finding a funtion symbol is expected
+      // since fuctions are compiled on demand
+      spdlog::debug("LazyJIT: function {} not yet compiled (expected)"sv,
+                    I + Offset);
+      Result.emplace_back();
+    }
+  }
+  return Result;
+}
+
 Expect<std::shared_ptr<Executable>> JIT::load(Data D) noexcept {
   OrcLLJIT J;
   if (auto Res = OrcLLJIT::create(); !Res) {
@@ -90,4 +147,34 @@ Expect<std::shared_ptr<Executable>> JIT::load(Data D) noexcept {
 
   return std::make_shared<JITLibrary>(std::move(J));
 }
+
+Expect<std::shared_ptr<LazyJITLibrary>>
+JIT::loadLazy(Data D, size_t NumFunctions) noexcept {
+  OrcLLJIT J;
+  if (auto Res = OrcLLJIT::create(); !Res) {
+    spdlog::error("{}"sv, Res.error().message().string_view());
+    return Unexpect(ErrCode::Value::HostFuncError);
+  } else {
+    J = std::move(*Res);
+  }
+
+  auto &LLModule = D.extract().LLModule;
+  auto TSContext = D.extract().getTSContext();
+
+  if (Conf.getCompilerConfigure().isDumpIR()) {
+    if (auto ErrorMessage = LLModule.printModuleToFile("wasm-lazy-jit.ll")) {
+      spdlog::error("printModuleToFile failed"sv);
+    }
+  }
+
+  auto MainJD = J.getMainJITDylib();
+  if (auto Err = J.addLLVMIRModule(
+          MainJD, OrcThreadSafeModule(LLModule.release(), TSContext))) {
+    spdlog::error("{}"sv, Err.message().string_view());
+    return Unexpect(ErrCode::Value::HostFuncError);
+  }
+
+  return std::make_shared<LazyJITLibrary>(std::move(J), NumFunctions);
+}
+
 } // namespace WasmEdge::LLVM

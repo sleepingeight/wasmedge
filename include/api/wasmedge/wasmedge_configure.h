@@ -201,6 +201,31 @@ WasmEdge_ConfigureSetAllowAFUNIX(WasmEdge_ConfigureContext *Cxt,
 WASMEDGE_CAPI_EXPORT extern bool
 WasmEdge_ConfigureIsAllowAFUNIX(const WasmEdge_ConfigureContext *Cxt);
 
+/// Set the lazy JIT compilation mode option.
+///
+/// When enabled, functions are compiled on-demand when first called,
+/// rather than compiling the entire module upfront. This can reduce
+/// startup time for large modules where only a subset of functions
+/// are actually used.
+///
+/// This function is thread-safe.
+///
+/// \param Cxt the WasmEdge_ConfigureContext to set the boolean value.
+/// \param IsLazyJIT the boolean value to enable/disable lazy JIT mode.
+WASMEDGE_CAPI_EXPORT extern void
+WasmEdge_ConfigureSetLazyJIT(WasmEdge_ConfigureContext *Cxt,
+                             const bool IsLazyJIT);
+
+/// Get the lazy JIT compilation mode option.
+///
+/// This function is thread-safe.
+///
+/// \param Cxt the WasmEdge_ConfigureContext to get the boolean value.
+///
+/// \returns the boolean value indicating if lazy JIT mode is enabled.
+WASMEDGE_CAPI_EXPORT extern bool
+WasmEdge_ConfigureIsLazyJIT(const WasmEdge_ConfigureContext *Cxt);
+
 /// Set the optimization level of the AOT compiler.
 ///
 /// This function is thread-safe.

@@ -378,6 +378,12 @@ int Tool(struct DriverToolOptions &Opt) noexcept {
     Conf.getCompilerConfigure().setOptimizationLevel(
         WasmEdge::CompilerConfigure::OptimizationLevel::O1);
   }
+  if (Opt.ConfEnableLazyJIT.value()) {
+    Conf.getRuntimeConfigure().setEnableJIT(true);
+    Conf.getRuntimeConfigure().setLazyJIT(true);
+    Conf.getCompilerConfigure().setOptimizationLevel(
+        WasmEdge::CompilerConfigure::OptimizationLevel::O1);
+  }
   if (Opt.ConfEnableCoredump.value()) {
     Conf.getRuntimeConfigure().setEnableCoredump(true);
   }

@@ -228,6 +228,27 @@ public:
     return std::forward<CallbackT>(CallBack)(ExpGlobals);
   }
 
+  /// Find the index of a function instance in this module.
+  /// Returns UINT32_MAX if not found.
+  uint32_t getFuncIdx(const FunctionInstance *FuncInst) const noexcept {
+    std::shared_lock Lock(Mutex);
+    for (uint32_t I = 0; I < FuncInsts.size(); ++I) {
+      if (FuncInsts[I] == FuncInst) {
+        return I;
+      }
+    }
+    return UINT32_MAX;
+  }
+
+  /// Public getter for function instance by index.
+  Expect<FunctionInstance *> getFuncInst(uint32_t Idx) const noexcept {
+    std::shared_lock Lock(Mutex);
+    if (Idx >= FuncInsts.size()) {
+      return Unexpect(ErrCode::Value::WrongInstanceIndex);
+    }
+    return FuncInsts[Idx];
+  }
+
 protected:
   friend class Executor::Executor;
   friend class ComponentInstance;

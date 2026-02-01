@@ -231,7 +231,7 @@ if(WASMEDGE_BUILD_TESTS)
   add_subdirectory(test)
 endif()
 if(WASMEDGE_BUILD_EXAMPLE)
-  add_subdirectory(examples/plugin/get-string)
+  add_subdirectory(lazy)
 endif()
 
 include(CPack)

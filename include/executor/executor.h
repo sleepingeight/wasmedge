@@ -220,6 +220,12 @@ public:
     atomicNotifyAll();
   }
 
+  /// Register a callback for lazy function compilation
+  void registerLazyCompilationCallback(
+      std::function<Expect<void>(const uint32_t)> Callback) {
+    LazyCompilationHandler = std::move(Callback);
+  }
+
 private:
   /// Run Wasm bytecode expression for initialization.
   Expect<void> runExpression(Runtime::StackManager &StackMgr,
@@ -1135,6 +1141,8 @@ private:
   std::atomic_uint32_t StopToken = 0;
   /// Executor Host Function Handler
   HostFuncHandler HostFuncHelper = {};
+  /// Callback for lazy function compilation
+  std::function<Expect<void>(const uint32_t)> LazyCompilationHandler;
 };
 
 } // namespace Executor

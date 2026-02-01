@@ -26,12 +26,18 @@
 #include "runtime/instance/module.h"
 #include "runtime/storemgr.h"
 
+#ifdef WASMEDGE_USE_LLVM
+#include "llvm/compiler.h"
+#include "llvm/jit.h"
+#endif
+
 #include <cstdint>
 #include <memory>
 #include <shared_mutex>
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -260,6 +266,25 @@ public:
   /// Getter of statistics.
   Statistics::Statistics &getStatistics() noexcept { return Stat; }
 
+#ifdef WASMEDGE_USE_LLVM
+  /// Getter for lazy JIT compilation statistics.
+  /// Returns the number of functions that have been lazy-compiled.
+  size_t getLazyJITCompiledCount() const noexcept {
+    return LazyCompiledFuncs.size();
+  }
+
+  /// Returns the total number of local functions in the module.
+  size_t getLazyJITTotalFunctionCount() const noexcept {
+    if (LazyJITLib) {
+      return LazyJITLib->getTotalFunctionCount();
+    }
+    return 0;
+  }
+
+  /// Check if lazy JIT mode is active for this VM instance.
+  bool isLazyJITActive() const noexcept { return LazyJITLib != nullptr; }
+#endif
+
 private:
   Expect<void> unsafeRegisterModule(std::string_view Name,
                                     const std::filesystem::path &Path);
@@ -386,6 +411,22 @@ private:
   /// Reference to the store.
   Runtime::StoreManager &StoreRef;
   /// @}
+
+#ifdef WASMEDGE_USE_LLVM
+  /// \name Lazy JIT support.
+  /// @{
+  /// Lazy JIT library for on-demand function compilation.
+  std::shared_ptr<LLVM::LazyJITLibrary> LazyJITLib;
+  /// Track which functions have been lazy-compiled.
+  std::unordered_set<uint32_t> LazyCompiledFuncs;
+  /// Number of import functions (offset for local function indices).
+  uint32_t ImportFuncCount = 0;
+  /// @}
+
+  /// Lazy compile a function if lazy JIT mode is enabled and function not yet
+  /// compiled.
+  Expect<void> lazyCompileFunction(uint32_t FuncIdx);
+#endif
 };
 
 } // namespace VM
