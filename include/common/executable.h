@@ -78,6 +78,10 @@ public:
     kMemAtomicWait,
     kTableGetFuncSymbol,
     kRefGetFuncSymbol,
+    kFuncGetFuncSymbol,
+    kReturnCall,
+    kReturnCallIndirect,
+    kReturnCallRef,
     kIntrinsicMax,
   };
   using IntrinsicsTable = void * [uint32_t(Intrinsics::kIntrinsicMax)];
@@ -88,6 +92,8 @@ public:
 
   virtual std::vector<Symbol<void>> getCodes(size_t Offset,
                                              size_t Size) noexcept = 0;
+
+  virtual bool isLazy() const noexcept { return false; }
 
 protected:
   template <typename T> Symbol<T> createSymbol(T *Pointer) const noexcept {

@@ -25,6 +25,9 @@
 
 #include "runtime/instance/module.h"
 #include "runtime/storemgr.h"
+#include "llvm/compiler.h"
+#include "llvm/data.h"
+#include "llvm/jit.h"
 
 #include <cstdint>
 #include <memory>
@@ -32,8 +35,13 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
+
+namespace llvm {
+class Module;
+}
 
 namespace WasmEdge {
 namespace VM {
@@ -406,6 +414,43 @@ private:
   /// Reference to the store.
   Runtime::StoreManager &StoreRef;
   /// @}
+
+#ifdef WASMEDGE_USE_LLVM
+  /// \name Lazy JIT.
+  /// @{
+  /// Map from module instance to its lazy JIT state
+  std::unordered_map<const Runtime::Instance::ModuleInstance *,
+                     LLVM::LazyJITState>
+      LazyJITStates;
+
+  struct LazyJITPendingState {
+    ~LazyJITPendingState();
+    const AST::Module *Module = nullptr;
+    const Runtime::Instance::ModuleInstance *ModuleInstance = nullptr;
+    uint32_t ImportFuncCount = 0;
+    uint32_t TotalFuncCount = 0;
+    LLVM::Data LLData;
+    std::unique_ptr<LLVM::Compiler::CompileContext,
+                    LLVM::Compiler::CompileContextDeleter>
+        LLContext;
+    std::shared_ptr<Executable> Exec;
+    std::unique_ptr<llvm::Module> CumulativeModule;
+    std::unordered_set<uint32_t> LazyCompileInProgress;
+  };
+
+  LazyJITPendingState Pending;
+
+  /// Lazy compile a function if lazy JIT mode is enabled and function not yet
+  /// compiled.
+  Expect<void>
+  unsafeLazyCompileFunction(const Runtime::Instance::ModuleInstance *ModInst,
+                            uint32_t FuncIdx);
+
+  /// Get or create lazy JIT state for a module instance
+  LLVM::LazyJITState &
+  getLazyJITStateForModule(const Runtime::Instance::ModuleInstance *ModInst);
+  /// @}
+#endif
 };
 
 } // namespace VM

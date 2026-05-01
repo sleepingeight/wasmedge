@@ -61,6 +61,7 @@ else()
     ${CMAKE_THREAD_LIBS_INIT}
     LINK_COMPONENTS
     core
+    linker
     lto
     native
     nativecodegen
@@ -77,7 +78,7 @@ wasmedge_setup_target(wasmedgeLLVM)
 
 target_include_directories(wasmedgeLLVM
   SYSTEM
-  PRIVATE
+  PUBLIC
   ${LLVM_INCLUDE_DIR}
   ${LLD_INCLUDE_DIRS}
 )
